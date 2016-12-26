@@ -12,7 +12,7 @@
  *     1x Output DC or PWM output (generic) on D5
  *     1x Input  Presence sensor for Lights on D6
  *     2x Input Relay Output on D7 for 1 Garage Door Control on D8 and A0
- *     1x TH sensor DHT22 on pin D6
+ *     1x TH sensor DHT22 on pin D7
  *     Radio normally connected as per Mysensors.org
  *     
  *     Optionally (not implemented right away here) an LCD on A4 and A5
@@ -77,8 +77,8 @@
 #define CHILD_ID_Garage_Motor_2 9
 
 // Other Defines
-#define ON 1
-#define OFF 0
+#define ON 0
+#define OFF 1
 #define DETACH_DELAY 900          // Tune this to let your movement finish before detaching the servo
 #define SENSOR_TEMP_OFFSET 0      // Set this offset if the sensor has a permanent small offset to the real temperatures
 
@@ -150,9 +150,11 @@ void setup()
   digitalWrite(PWM, OFF);                         // Make sure Motor is off at startup
   analogWrite(PWM, 0);
   pinMode(PWM, OUTPUT);                 // Then set Motor pins in output mode
-
+  digitalWrite(A1, ON);
+  pinMode(A1, OUTPUT);
   dht.setup(DHT_DATA_PIN); // set data pin of DHT sensos
   wait(2000);
+  digitalWrite(A1, OFF);
 }
 
 
@@ -188,6 +190,7 @@ void presentation()
 */
 void loop() 
 {
+
   Serial.print("Main loop at node: ");
   Serial.println(getNodeId());
   Debounce_Door1.update();
@@ -230,14 +233,14 @@ void loop()
       analogWrite(PWM, 0);
     } else{};
     oldPres = value4;
-  
-
-  ReadTemp_n_Humidity;
-  
+  ReadTemp(); 
   wait(2000);
- //sleep(UPDATE_INTERVAL);  // Sleep for a while to save energy
- // sleep(BUTTON_PIN, CHANGE, UPDATE_INTERVAL);
-
 } 
- 
+
+
+
+
+
+
+
 

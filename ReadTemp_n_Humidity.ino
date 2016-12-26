@@ -1,4 +1,4 @@
-void ReadTemp_n_Humidity()
+void ReadTemp()
 {
   float temperature = dht.getTemperature();    // Get temperature from DHT library
     if (isnan(temperature)) {
@@ -45,4 +45,6 @@ void ReadTemp_n_Humidity()
     }
 }
 
+
+ 
 
