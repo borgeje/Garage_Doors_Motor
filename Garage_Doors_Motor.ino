@@ -83,31 +83,38 @@
 #define SENSOR_TEMP_OFFSET 0      // Set this offset if the sensor has a permanent small offset to the real temperatures
 
 // Some additional definitons and INSTANCES creation
-MyMessage msgServo(CHILD_ID_Servo, V_LIGHT);
-MyMessage msgServo_Dur(CHILD_ID_Servo, V_DIMMER);
 MyMessage msgTemp(CHILD_ID_TEMP, V_TEMP);
 MyMessage msgHum(CHILD_ID_HUM, V_HUM);
-Servo Servo_Dispenser;            // create servo object to control a servo   
-Bounce Local_dispense_button = Bounce();  // create instance of debounced button
+MyMessage msgMotion(CHILD_ID_Presence, V_TRIPPED);
+MyMessage msgPWM(CHILD_ID_PWM, V_DIMMER);
+MyMessage msgDoor1(CHILD_ID_Door_Sensor_1, V_TRIPPED);
+MyMessage msgDoor2(CHILD_ID_Door_Sensor_2, V_TRIPPED);
+MyMessage msgDoor3(CHILD_ID_Door_Sensor_3, V_TRIPPED);
+MyMessage msgMotor1(CHILD_ID_Garage_Motor_1, V_LIGHT);
+MyMessage msgMotor2(CHILD_ID_Garage_Motor_2, V_LIGHT);
+
+Bounce Debounce_Door1 = Bounce();  // create instance of debounced button
+Bounce Debounce_Door2 = Bounce();  // create instance of debounced button
+Bounce Debounce_Door3 = Bounce();  // create instance of debounced button
+Bounce Debounce_PRES = Bounce();
 DHT dht;                          // Creating instance of DHT
 
 //VARIABLES
-const int analogInPin = A0
-int oldValue=0;
+int oldDoorValue1=0;
+int oldDoorValue2=0;
+int oldDoorValue3=0;
 int a = 0;                        //intermediate variable for servo backandforth math // Servo moves around 90                       
-// Sleep time between sensor updates (in milliseconds) // Must be >1000ms for DHT22 and >2000ms for DHT11
-static const uint64_t UPDATE_INTERVAL = 15000;
-// Force sending an update of the temperature after n sensor reads
-// i.e. the sensor would force sending an update every UPDATE_INTERVAL*FORCE_UPDATE_N_READS [ms]
-static const uint8_t FORCE_UPDATE_N_READS = 10;
+static const uint64_t UPDATE_INTERVAL = 15000; // Sleep time between sensor updates (in milliseconds) // Must be >1000ms for DHT22 and >2000ms for DHT11
+static const uint8_t FORCE_UPDATE_N_READS = 3; // Force sending an update of the temperature after n sensor reads
 float lastTemp;                   // variable to hold last read temperature
 float lastHum;                    // variable to hold last read humidity
 uint8_t nNoUpdatesTemp;           // keeping track of # of reqdings 
 uint8_t nNoUpdatesHum;
 bool metric = true;               // metric or imperial?
-int ServoSpeed = 2000;
 bool state;
-
+const uint8_t DoorActivationPeriod = 600; // [ms]
+int PWMvar = 100;
+int oldPres;
 
 
 
@@ -117,21 +124,35 @@ bool state;
 void setup()  
 {  
   Serial.println("Running Setup");
-  pinMode(BUTTON_PIN,INPUT);                 // Setup the button
-  digitalWrite(BUTTON_PIN,HIGH);             // Activate internal pull-up
-  Local_dispense_button.attach(BUTTON_PIN);  // After setting up the button, setup debouncer
-  Local_dispense_button.interval(5);
-  digitalWrite(LED_PIN, OFF);               // Make sure LED is off at startup
-  pinMode(LED_PIN, OUTPUT);                 // Then set LED pins in output mode
+  // Doors setup input pins and debounce function
+  pinMode(Door_Sensor_1,INPUT);                 // Setup Doors as INputs
+  digitalWrite(Door_Sensor_1,HIGH);             // Activate internal pull-up
+  Debounce_Door1.attach(Door_Sensor_1);           // After setting up the button, setup debouncer
+  Debounce_Door1.interval(1);
+  pinMode(Door_Sensor_2,INPUT);                 // Setup Doors as INputs
+  digitalWrite(Door_Sensor_2,HIGH);             // Activate internal pull-up
+  Debounce_Door2.attach(Door_Sensor_2);           // After setting up the button, setup debouncer
+  Debounce_Door2.interval(1);
+  pinMode(Door_Sensor_3,INPUT);                 // Setup Doors as INputs
+  digitalWrite(Door_Sensor_3,HIGH);             // Activate internal pull-up
+  Debounce_Door3.attach(Door_Sensor_3);           // After setting up the button, setup debouncer
+  Debounce_Door3.interval(1);
+  pinMode(Presence_Input, INPUT);
+  digitalWrite(Presence_Input, HIGH);                     // internal pullups
+  Debounce_PRES.attach(Presence_Input);           // After setting up the button, setup debouncer
+  Debounce_PRES.interval(1);
+  
+  // Digital outputs pin
+  digitalWrite(Garage_Motor_1, OFF);               // Make sure Motor is off at startup
+  pinMode(Garage_Motor_1, OUTPUT);                 // Then set Motor pins in output mode
+  digitalWrite(Garage_Motor_2, OFF);               // Make sure Motor is off at startup
+  pinMode(Garage_Motor_2, OUTPUT);                 // Then set Motor pins in output mode
+  digitalWrite(PWM, OFF);                         // Make sure Motor is off at startup
+  analogWrite(PWM, 0);
+  pinMode(PWM, OUTPUT);                 // Then set Motor pins in output mode
 
- // NOT USED CODE - Set relay to last known state (using eeprom storage) 
- // state = loadState(CHILD_ID_Servo);
- // digitalWrite(LED_PIN, state?RELAY_ON:RELAY_OFF);
-
-  Servo_Dispenser.attach(SERVO_DIGITAL_PIN);  // attaches the servo on pin  to the servo object 
-  Servo_Dispenser.detach();
   dht.setup(DHT_DATA_PIN); // set data pin of DHT sensos
-  wait(1500);
+  wait(2000);
 }
 
 
@@ -142,13 +163,22 @@ void setup()
 
 void presentation()  
 {
-  sendSketchInfo("Joao_Feeder", "1.0");   // Send the sketch version information to the gateway and Controller
+  sendSketchInfo("Joao_Garage_Sensors", "1.0");   // Send the sketch version information to the gateway and Controller
   Serial.println("Presentation function..");
-  present(CHILD_ID_Servo, S_DIMMER);      // Register all sensors to gw (they will be created as child devices)
   present(CHILD_ID_TEMP, S_TEMP);         // Registar Temperature to gw
   present(CHILD_ID_HUM, S_HUM);           // Register Humidity to gw
+  present(CHILD_ID_Door_Sensor_1, S_DOOR);      // Register all sensors to gw (they will be created as child devices)
+  present(CHILD_ID_Door_Sensor_2, S_DOOR);      // Register all sensors to gw (they will be created as child devices)
+  present(CHILD_ID_Door_Sensor_3, S_DOOR);      // Register all sensors to gw (they will be created as child devices)
+  present(CHILD_ID_PWM, S_DIMMER);              // Register PWM output
+  present(CHILD_ID_Presence, S_MOTION);      // Register Motor doors
+  present(CHILD_ID_Garage_Motor_1, S_BINARY);      // Register Motor doors
+  present(CHILD_ID_Garage_Motor_2, S_BINARY);      // Register Motor doors  
   metric = getConfig().isMetric;          // get configuration from the controller on UNIT system
+
 }
+
+
 
 
 
@@ -158,19 +188,53 @@ void presentation()
 */
 void loop() 
 {
+  Serial.print("Main loop at node: ");
+  Serial.println(getNodeId());
+  Debounce_Door1.update();
+  Debounce_Door2.update();
+  Debounce_Door3.update();
 
-  Local_dispense_button.update();
-  Serial.println("Main loop");
-  int value = Local_dispense_button.read();   //Get the update value
-  if (value != oldValue && value==0) {
-     send(msgServo.set(value?false:true), true); // Send new state and request ack back
-     Serial.println("Button Pressed - Servo");
+  int value = Debounce_Door1.read();   //Get the update value
+  if (value != oldDoorValue1) {
+     send(msgDoor1.set(value?true:false), true); // Send new state and request ack back
+     Serial.print("Door 1:");
+     Serial.println(value);
     }
-  oldValue = value;
+  oldDoorValue1 = value;
+
+  int value2 = Debounce_Door2.read();   //Get the update value
+  if (value2 != oldDoorValue2) {
+     send(msgDoor2.set(value2?true:false), true); // Send new state and request ack back
+     Serial.print("Door 2:");
+     Serial.println(value2);
+    }
+  oldDoorValue2 = value2;
+
+  int value3 = Debounce_Door3.read();   //Get the update value
+  if (value3 != oldDoorValue3) {
+     send(msgDoor3.set(value3?true:false), true); // Send new state and request ack back
+     Serial.print("Door 3:");
+     Serial.println(value3);
+    }
+  oldDoorValue3 = value3;
+
+ int value4 = Debounce_PRES.read();   //Get the update value
+  if (value4 != oldPres && value4 == true) {
+     send(msgMotion.set(true)); // Send new state and request ack back
+     Serial.print("Motion not Detected in Garage");
+     Serial.println(value4);
+     analogWrite(PWM, PWMvar);
+    }
+    else if (value4 != oldPres && value4 == false) {
+      send(msgMotion.set(false)); // Send new state and request ack back
+      analogWrite(PWM, 0);
+    } else{};
+    oldPres = value4;
+  
 
   ReadTemp_n_Humidity;
   
-  wait(10000);
+  wait(2000);
  //sleep(UPDATE_INTERVAL);  // Sleep for a while to save energy
  // sleep(BUTTON_PIN, CHANGE, UPDATE_INTERVAL);
 

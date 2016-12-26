@@ -4,34 +4,35 @@ void receive(const MyMessage &message) {
   if (message.isAck()) {
      Serial.println("This is an ack from gateway");
   }
+  state = message.getBool();      // Change relay state
+  if (message.type == V_LIGHT && message.sensor == CHILD_ID_Garage_Motor_1 && state == true) {
+       Serial.println("Drive Motor 1");
+       digitalWrite(Garage_Motor_1, HIGH);
+       wait(DoorActivationPeriod);
+       digitalWrite(Garage_Motor_1, LOW);
+       send(msgMotor1.set(false), true);    // After activating the door, move indicator to FALSE again
 
-  if (message.type == V_LIGHT) {
-       state = message.getBool();      // Change relay state
-       Servo_Dispenser.attach(SERVO_DIGITAL_PIN);
-       Servo_Dispenser.write(Serv);
-       Serial.println("Dispensando Local");
-       digitalWrite(LED_PIN, HIGH);
-       delay(2000);
-       a = 90-Serv;
-       Servo_Dispenser.write(a+90);
-       digitalWrite(LED_PIN, LOW);
-       delay(2000);
-       Servo_Dispenser.write(90);
-       
-//     digitalWrite(LED_PIN, state?RELAY_ON:RELAY_OFF);
-//     saveState(CHILD_ID_Servo, state);  // Store state in eeprom
-    
-     // Write some debug info
-     Serial.print("Incoming change for sensor:");
-     Serial.print(message.sensor);
-     Serial.print(", New status: ");
-     Serial.println(message.getBool());
+       // Write some debug info
+       Serial.print("Incoming change for sensor:");
+       Serial.print(message.sensor);
+       Serial.print(", New status: ");
+       Serial.println(state);
    } 
-   else if (message.type == V_DIMMER) {
-        int Dimme = message.data;
-        ServoSpeed = (Dimme/5*100)+1000;
+   else if (message.type == V_LIGHT && message.sensor == CHILD_ID_Garage_Motor_2 && state == true) {
+       Serial.println("Drive Motor 2");
+       digitalWrite(Garage_Motor_2, HIGH);
+       wait(DoorActivationPeriod);
+       digitalWrite(Garage_Motor_2, LOW);
+       send(msgMotor2.set(false), true);    // After activating the door, move indicator to FALSE again
+       // Write some debug info
+       Serial.print("Incoming change for sensor:");
+       Serial.print(message.sensor);
+       Serial.print(", New status: ");
+       Serial.println(state);
         }
+     else if (message.type == V_DIMMER && message.sensor == CHILD_ID_PWM) {
+          PWMvar = message.getInt();
+           }
         else {};
-   Servo_Dispenser.detach();
 
 }
