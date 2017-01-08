@@ -2,7 +2,7 @@
  *******************************
  *
  * REVISION HISTORY
- * Version 1.1 - Joao E Borges
+ * Version 1.2 - Joao E Borges
  * 
  * DESCRIPTION
  *    Garage Sensor, planning this to be the single board in the garage 
@@ -114,7 +114,7 @@ bool metric = true;               // metric or imperial?
 bool state;
 const uint8_t DoorActivationPeriod = 600; // [ms]
 int PWMvar = 100;
-int oldPres;
+bool oldPresence;
 
 
 
@@ -138,9 +138,9 @@ void setup()
   Debounce_Door3.attach(Door_Sensor_3);           // After setting up the button, setup debouncer
   Debounce_Door3.interval(1);
   pinMode(Presence_Input, INPUT);
-  digitalWrite(Presence_Input, HIGH);                     // internal pullups
-  Debounce_PRES.attach(Presence_Input);           // After setting up the button, setup debouncer
-  Debounce_PRES.interval(1);
+//  digitalWrite(Presence_Input, HIGH);            //disabled internal inputs in version 1.2
+//  Debounce_PRES.attach(Presence_Input);          // disabled using debouce function in version 1.2r
+//  Debounce_PRES.interval(1);
   
   // Digital outputs pin
   digitalWrite(Garage_Motor_1, OFF);               // Make sure Motor is off at startup
@@ -165,7 +165,7 @@ void setup()
 
 void presentation()  
 {
-  sendSketchInfo("Joao_Garage_Sensors", "1.1");   // Send the sketch version information to the gateway and Controller
+  sendSketchInfo("Joao_Garage_Sensors", "1.2");   // Send the sketch version information to the gateway and Controller
   Serial.println("Presentation function..");
   present(CHILD_ID_TEMP, S_TEMP);         // Registar Temperature to gw
   present(CHILD_ID_HUM, S_HUM);           // Register Humidity to gw
@@ -196,7 +196,7 @@ void loop()
   Debounce_Door1.update();
   Debounce_Door2.update();
   Debounce_Door3.update();
-  Debounce_PRES.update();
+//  Debounce_PRES.update();
 
   int value = Debounce_Door1.read();   //Get the update value
   if (value != oldDoorValue1) {
@@ -222,18 +222,18 @@ void loop()
     }
   oldDoorValue3 = value3;
 
- int value4 = Debounce_PRES.read();   //Get the update value
-  if (value4 != oldPres && value4 == true) {
-     send(msgMotion.set(true)); // Send new state and request ack back
-     Serial.print("Motion not Detected in Garage");
-     Serial.println(value4);
-     analogWrite(PWM, PWMvar);
-    }
-    else if (value4 != oldPres && value4 == false) {
-      send(msgMotion.set(false)); // Send new state and request ack back
-      analogWrite(PWM, 0);
-    } else{};
-    oldPres = value4;
+ bool Tripped = digitalRead(Presence_Input);   //Get the update value
+ // if (value4 != oldPres && value4 == true) {
+     send(msgMotion.set((Tripped?"1":"0"))); // Send new state and request ack back
+     Serial.print("Motion Detected in Garage: ");
+     Serial.println(Tripped);
+ //    analogWrite(PWM, PWMvar);
+  //  }
+  //  else if (value4 != oldPres && value4 == false) {
+  //    send(msgMotion.set(false)); // Send new state and request ack back
+ //     analogWrite(PWM, 0);
+//    } else{};
+//    oldPresence = value4;
   ReadTemp(); 
   wait(2000);
 } 
