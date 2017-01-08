@@ -2,7 +2,7 @@
  *******************************
  *
  * REVISION HISTORY
- * Version 1.0 - Joao E Borges
+ * Version 1.1 - Joao E Borges
  * 
  * DESCRIPTION
  *    Garage Sensor, planning this to be the single board in the garage 
@@ -151,7 +151,7 @@ void setup()
   analogWrite(PWM, 0);
   pinMode(PWM, OUTPUT);                 // Then set Motor pins in output mode
   digitalWrite(A1, ON);
-  pinMode(A1, OUTPUT);
+  pinMode(A1, OUTPUT);           // This pin is just to turn an LED to show we have been able to enter SETUP 
   dht.setup(DHT_DATA_PIN); // set data pin of DHT sensos
   wait(2000);
   digitalWrite(A1, OFF);
@@ -165,7 +165,7 @@ void setup()
 
 void presentation()  
 {
-  sendSketchInfo("Joao_Garage_Sensors", "1.0");   // Send the sketch version information to the gateway and Controller
+  sendSketchInfo("Joao_Garage_Sensors", "1.1");   // Send the sketch version information to the gateway and Controller
   Serial.println("Presentation function..");
   present(CHILD_ID_TEMP, S_TEMP);         // Registar Temperature to gw
   present(CHILD_ID_HUM, S_HUM);           // Register Humidity to gw
@@ -196,6 +196,7 @@ void loop()
   Debounce_Door1.update();
   Debounce_Door2.update();
   Debounce_Door3.update();
+  Debounce_PRES.update();
 
   int value = Debounce_Door1.read();   //Get the update value
   if (value != oldDoorValue1) {

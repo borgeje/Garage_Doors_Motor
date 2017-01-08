@@ -10,6 +10,7 @@ void receive(const MyMessage &message) {
        digitalWrite(Garage_Motor_1, ON);
        wait(DoorActivationPeriod);
        digitalWrite(Garage_Motor_1, OFF);
+       wait(500);
        send(msgMotor1.set(false), true);    // After activating the door, move indicator to FALSE again
 
        // Write some debug info
@@ -23,6 +24,7 @@ void receive(const MyMessage &message) {
        digitalWrite(Garage_Motor_2, ON);
        wait(DoorActivationPeriod);
        digitalWrite(Garage_Motor_2, OFF);
+       wait(500);
        send(msgMotor2.set(false), true);    // After activating the door, move indicator to FALSE again
        // Write some debug info
        Serial.print("Incoming change for sensor:");
