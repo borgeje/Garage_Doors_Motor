@@ -176,7 +176,7 @@ void presentation()
   present(CHILD_ID_Presence, S_MOTION);      // Register Motor doors
   present(CHILD_ID_Garage_Motor_1, S_BINARY);      // Register Motor doors
   present(CHILD_ID_Garage_Motor_2, S_BINARY);      // Register Motor doors  
-  metric = getConfig().isMetric;          // get configuration from the controller on UNIT system
+//  metric = getConfig().isMetric;          // get configuration from the controller on UNIT system
 
 }
 
